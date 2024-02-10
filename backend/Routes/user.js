@@ -2,7 +2,8 @@ const express = require('express')
 const jwt = require('jsonwebtoken')
 const User = require("../db")
 const zod = require('zod')
-const {JWT_SECRET} = require('../config')
+const { JWT_SECRET } = require('../config')
+const authmiddleware = require('../middleware')
 
 //create a user router
 const userRouter = express.Router()
@@ -87,5 +88,60 @@ userRouter.post('/signin', async(req,res)=>{
     })
 })
 
+//3. update user information
+const updateSchema = zod.object({
+    password : zod.string().optional(),
+    firstName : zod.string().optional(),
+    lastName : zod.string().optional()
+})
+userRouter.put('/', authmiddleware, async (req,res)=>{
+    const { success } = updateSchema.safeParse(req.body)
+    if (!success) {
+        res.status(411).json({
+            message: "Error while updating information"
+        })
+    }
+    //else update the infor using the userID from the header field added during auth
+    const result = await User.updateOne(
+        { _id: req.userId }, // Filter to select the document to update
+        { $set: req.body }   // Fields to update //content to be updated, filter to select doc to update
+        )
+    if(result.modifiedCount > 0 ){
+        res.status(200).json({
+            message: "Updation successfull !"
+        })
+    }
+    res.status(411).json({
+        message: "No match found"
+    })
+})
+
+//4. This is needed so users can search for their friends and send them money
+userRouter.get('/bulk', async(req,res)=>{
+    const filter = req.query.filter || "";
+    const users = await User.find({
+        $or :[
+            {
+                firstName : {
+                    $regex :filter,
+                }
+            },
+            {
+                lastName : {
+                    $regex :filter,
+                }
+            }
+        ]
+    })
+
+    res.json({
+        users: users.map( user =>({
+            userName : user.userName,
+            firstName : user.firstName,
+            lastName : user.lastName,
+            _id : user._id
+        }))
+    })
+})
 
 module.exports =  userRouter 
