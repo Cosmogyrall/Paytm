@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 
 const connection = mongoose.connect('mongodb://localhost:27017/Paytm')
 
+//1. user db
 const UserSchema = mongoose.Schema({
     userName : {
         type : String,
@@ -31,15 +32,10 @@ const UserSchema = mongoose.Schema({
     } 
 });
 
-//create the model for your schema 
-const User = mongoose.model('users',UserSchema)
 
-//export 
-module.exports =  User
-
-//balance db
+//2. balance db
 const AccountSchema = mongoose.Schema({
-    userID : {
+    userId : {
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
         required : true
@@ -50,5 +46,8 @@ const AccountSchema = mongoose.Schema({
     }
 })
 
+//create the model for your schema 
+const User = mongoose.model('users',UserSchema)
 const Account = mongoose.model("accounts",AccountSchema)
-module.exports = Account
+//export 
+module.exports = { User, Account }

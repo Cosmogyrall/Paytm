@@ -1,13 +1,13 @@
 const express = require('express')
 const jwt = require('jsonwebtoken')
-const User = require("../db")
 const zod = require('zod')
 const { JWT_SECRET } = require('../config')
 const authmiddleware = require('../middleware')
+const {User, Account} = require('../db')
 
 //create a user router
 const userRouter = express.Router()
-
+///////////////////////////////////////////////////
 //zod signup schema
 const signupSchema = zod.object({
     userName : zod.string().email(),
@@ -15,7 +15,6 @@ const signupSchema = zod.object({
     firstName : zod.string(),
     lastName : zod.string()
 })
-
 //get the post request data and create a new user using SIGNUP
 userRouter.post('/signup', async(req,res)=>{
     const body = req.body;
@@ -37,7 +36,12 @@ userRouter.post('/signup', async(req,res)=>{
     }
     //if user not find in db, create a new one. 
     const dbuser = await User.create(body)
-    console.log("created a new user")
+    const id = dbuser._id
+    await Account.create({
+        userId : id,
+        balance : 1 + Math.random()*10000
+    })
+    console.log("created a new user and balance initialized")
     //jwt sign creation
     const jwt_token = jwt.sign({
         userId : dbuser._id
@@ -49,13 +53,12 @@ userRouter.post('/signup', async(req,res)=>{
         token : jwt_token
     })
 } )
-
+///////////////////////////////////////////
 //signin input validation Schema using zod
 const signinSchema = zod.object({
     userName : zod.string().email(),
     password : zod.string()
 })
-
 //2. signin 
 userRouter.post('/signin', async(req,res)=>{
     const body = req.body;
@@ -87,7 +90,7 @@ userRouter.post('/signin', async(req,res)=>{
         message : "Login Error"
     })
 })
-
+//////////////////////////////////////
 //3. update user information
 const updateSchema = zod.object({
     password : zod.string().optional(),
@@ -115,7 +118,7 @@ userRouter.put('/', authmiddleware, async (req,res)=>{
         message: "No match found"
     })
 })
-
+////////////////////////////////////////////////
 //4. This is needed so users can search for their friends and send them money
 userRouter.get('/bulk', async(req,res)=>{
     const filter = req.query.filter || "";
